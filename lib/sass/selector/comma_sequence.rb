@@ -67,6 +67,17 @@ module Sass
         end.flatten)
       end
 
+      # Returns a SassScript representation of this selector.
+      #
+      # @return [Sass::Script::Value::List]
+      def to_sass_script
+        Sass::Script::Value::List.new(members.map do |seq|
+          Sass::Script::Value::List.new(seq.members.map do |component|
+            Sass::Script::Value::String.new(component.to_s)
+          end, :space)
+        end, :comma)
+      end
+
       # Returns a string representation of the sequence.
       # This is basically the selector string.
       #
