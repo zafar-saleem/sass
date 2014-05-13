@@ -1706,6 +1706,20 @@ WARNING
       "expected class name, was \"#\" for `selector-parse'", "selector-parse('.#')")
   end
 
+  def test_selector_nest
+    assert_equal(".foo .bar", evaluate("selector-nest('.foo', '.bar')"))
+    assert_equal(".a .foo .b .bar", evaluate("selector-nest('.a .foo', '.b .bar')"))
+  end
+
+  def test_selector_nest_checks_types
+    assert_error_message("$parent: 12 is not a valid selector: it must be a string,\n" +
+      "a list of strings, or a list of lists of strings for `selector-nest'",
+      "selector-nest(12, '.foo')")
+    assert_error_message("$child: 12 is not a valid selector: it must be a string,\n" +
+      "a list of strings, or a list of lists of strings for `selector-nest'",
+      "selector-nest('.foo', 12)")
+  end
+
   ## Regression Tests
 
   def test_inspect_nested_empty_lists

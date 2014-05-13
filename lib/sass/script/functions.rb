@@ -223,6 +223,10 @@ module Sass::Script
   # \{#selector_parse selector-parse($selector)}
   # : Parses a selector into the format returned by `&`.
   #
+  # \{#selector_nest selector-nest($parent, $child)}
+  # : Nests one selector beneath another like they would be nested in
+  #   the stylesheet.
+  #
   # ## Introspection Functions
   #
   # \{#feature_exists feature-exists($feature)}
@@ -2288,6 +2292,33 @@ module Sass::Script
       parse_selector(selector, :selector).to_sass_script
     end
     declare :selector_parse, [:selector]
+
+    # Return a new selector with `$child` nested beneath `$parent` as
+    # though it had been nested in the stylesheet.
+    #
+    # @example
+    #   selector-nest(".foo", ".bar") => .foo .bar
+    #   selector-nest(".a .foo", ".b .bar") => .a .foo .b .bar
+    #
+    # @overload selector_nest($parent, $child)
+    #   @param $parent [Sass::Script::Value::String, Sass::Script::Value::List]
+    #     The parent selector under which `$child` should be nested.
+    #     This can be either a string, a list of strings, or a list of
+    #     lists of strings as returned by `&`.
+    #   @param $child [Sass::Script::Value::String, Sass::Script::Value::List]
+    #     The child selector nested under `$parent`. This can be either
+    #     a string, a list of strings, or a list of lists of strings as
+    #     returned by `&`.
+    #   @return [Sass::Script::Value::List]
+    #     A list of lists of strings representing the result of nesting
+    #     `$child` under `$parent`. This is in the same format as a
+    #     selector returned by `&`.
+    def selector_nest(parent, child)
+      parent = parse_selector(parent, :parent)
+      child = parse_selector(child, :child)
+      child.resolve_parent_refs(parent).to_sass_script
+    end
+    declare :selector_nest, [:parent, :child]
 
     private
 
