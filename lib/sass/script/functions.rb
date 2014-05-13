@@ -220,6 +220,9 @@ module Sass::Script
   # * A comma-separated list of space-separated lists of strings such
   #   as `((".foo" ".bar"), (".baz" ".bang"))`.
   #
+  # In general, selector functions allow placeholder selectors
+  # (`%foo`) but disallow parent-reference selectors (`&`).
+  #
   # \{#selector_parse selector-parse($selector)}
   # : Parses a selector into the format returned by `&`.
   #
@@ -2303,9 +2306,13 @@ module Sass::Script
     # though it had been nested in the stylesheet as `$parent { $child
     # { ... } }`.
     #
+    # Unlike most selector functions, `selector-nest` allows the
+    # parent selector `&` to be used in its `$child` argument.
+    #
     # @example
     #   selector-nest(".foo", ".bar") => .foo .bar
     #   selector-nest(".a .foo", ".b .bar") => .a .foo .b .bar
+    #   selector-nest(".foo", "&.bar") => .foo.bar
     #
     # @overload selector_nest($parent, $child)
     #   @param $parent [Sass::Script::Value::String, Sass::Script::Value::List]
@@ -2322,7 +2329,7 @@ module Sass::Script
     #     selector returned by `&`.
     def selector_nest(parent, child)
       parent = parse_selector(parent, :parent)
-      child = parse_selector(child, :child)
+      child = parse_selector(child, :child, !!:allow_parent_ref)
       child.resolve_parent_refs(parent).to_sass_script
     end
     declare :selector_nest, [:parent, :child]
