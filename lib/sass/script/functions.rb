@@ -227,6 +227,9 @@ module Sass::Script
   # : Nests one selector beneath another like they would be nested in
   #   the stylesheet.
   #
+  # \{#selector_append selector-append($parent, $child)}
+  # : Appends one selector to another, as in `$parent { &$child { ... } }`.
+  #
   # ## Introspection Functions
   #
   # \{#feature_exists feature-exists($feature)}
@@ -2294,7 +2297,8 @@ module Sass::Script
     declare :selector_parse, [:selector]
 
     # Return a new selector with `$child` nested beneath `$parent` as
-    # though it had been nested in the stylesheet.
+    # though it had been nested in the stylesheet as `$parent { $child
+    # { ... } }`.
     #
     # @example
     #   selector-nest(".foo", ".bar") => .foo .bar
@@ -2319,6 +2323,55 @@ module Sass::Script
       child.resolve_parent_refs(parent).to_sass_script
     end
     declare :selector_nest, [:parent, :child]
+
+    # Return a new selector with `$child` appended to `$parent` as
+    # though it had been nested in the stylesheet as `$parent {
+    # &$child { ... } }`.
+    #
+    # @example
+    #   selector-append(".foo", ".bar") => .foo.bar
+    #   selector-append(".a .foo", ".b .bar") => "a .foo.b .bar"
+    #   selector-append(".foo", "-suffix") => ".foo-suffix"
+    #
+    # @overload selector_append($parent, $child)
+    #   @param $parent [Sass::Script::Value::String, Sass::Script::Value::List]
+    #     The parent selector to which `$child` should be appended. This
+    #     can be either a string, a list of strings, or a list of lists
+    #     of strings as returned by `&`.
+    #   @param $child [Sass::Script::Value::String, Sass::Script::Value::List]
+    #     The child selector to append to `$parent`. This can be either
+    #     a string, a list of strings, or a list of lists of strings as
+    #     returned by `&`.
+    #   @return [Sass::Script::Value::List]
+    #     A list of lists of strings representing the result of
+    #     appending `$child` to `$parent`. This is in the same format as
+    #     a selector returned by `&`.
+    #   @raise [ArgumentError] if `$child` could not be appended to `$parent`.
+    def selector_append(parent, child)
+      parent = parse_selector(parent, :parent)
+      child = parse_selector(child, :child)
+      child.members.each do |seq|
+        sseq = seq.members.first
+        unless sseq.is_a?(Sass::Selector::SimpleSequence)
+          raise ArgumentError.new("Can't append \"#{seq}\" to \"#{parent}\"")
+        end
+
+        base = sseq.base
+        case base
+        when Sass::Selector::Universal
+          raise ArgumentError.new("Can't append \"#{seq}\" to \"#{parent}\"")
+        when Sass::Selector::Element
+          unless base.namespace.nil?
+            raise ArgumentError.new("Can't append \"#{seq}\" to \"#{parent}\"")
+          end
+          sseq.members[0] = Sass::Selector::Parent.new(base.name)
+        else
+          sseq.members.unshift Sass::Selector::Parent.new
+        end
+      end
+      child.resolve_parent_refs(parent).to_sass_script
+    end
+    declare :selector_append, [:parent, :child]
 
     private
 
